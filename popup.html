@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Browser Pasting Tool</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        width: 300px;
+        margin: 12px;
+      }
+
+      label,
+      input,
+      button,
+      #status {
+        display: block;
+        width: 100%;
+      }
+
+      input,
+      button {
+        box-sizing: border-box;
+        margin-top: 6px;
+        padding: 8px;
+      }
+
+      #status {
+        margin-top: 10px;
+        min-height: 20px;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <label for="pasteText">Text to type</label>
+    <input id="pasteText" type="text" placeholder="Paste text here" />
+    <button id="pasteButton" type="button">Paste</button>
+    <div id="status" aria-live="polite"></div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
