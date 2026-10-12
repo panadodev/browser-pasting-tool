@@ -1,70 +1,128 @@
-const api = typeof browser !== 'undefined' ? browser : chrome;
+const api = typeof browser !== "undefined" ? browser : chrome;
 const keyDelayMs = 40;
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const KEYMAP = (() => {
+  const map = {};
+  const add = (ch, code, keyCode, shift = false) =>
+    (map[ch] = { code, keyCode, shift });
+
+  for (let i = 0; i < 26; i++) {
+    const lower = String.fromCharCode(97 + i);
+    const code = `Key${lower.toUpperCase()}`;
+    add(lower, code, 65 + i);
+    add(lower.toUpperCase(), code, 65 + i, true);
+  }
+  "0123456789".split("").forEach((d) => add(d, `Digit${d}`, 48 + Number(d)));
+  ")!@#$%^&*(".split("").forEach((s, i) => add(s, `Digit${i}`, 48 + i, true));
+
+  const punct = [
+    ["-", "_", "Minus", 189],
+    ["=", "+", "Equal", 187],
+    ["[", "{", "BracketLeft", 219],
+    ["]", "}", "BracketRight", 221],
+    ["\\", "|", "Backslash", 220],
+    [";", ":", "Semicolon", 186],
+    ["'", '"', "Quote", 222],
+    [",", "<", "Comma", 188],
+    [".", ">", "Period", 190],
+    ["/", "?", "Slash", 191],
+    ["`", "~", "Backquote", 192],
+  ];
+  for (const [base, shifted, code, kc] of punct) {
+    add(base, code, kc);
+    add(shifted, code, kc, true);
+  }
+  add(" ", "Space", 32);
+  return map;
+})();
+
+const SPECIAL = {
+  "\n": { key: "Enter", code: "Enter", keyCode: 13 },
+  "\t": { key: "Tab", code: "Tab", keyCode: 9 },
+};
+const SHIFT = { key: "Shift", code: "ShiftLeft", keyCode: 16 };
+
+function describeChar(ch) {
+  if (SPECIAL[ch]) return { ...SPECIAL[ch], shift: false };
+  const m = KEYMAP[ch];
+  if (m) return { key: ch, ...m };
+  return { key: ch, code: "", keyCode: 0, shift: false };
 }
 
-function fireKeyboardEvent(target, type, key) {
+// Returns false if the page called preventDefault() (e.g. a VNC client)
+function fireKey(target, type, { key, code, keyCode }, shiftKey) {
   const event = new KeyboardEvent(type, {
     key,
+    code,
+    keyCode,
+    which: keyCode,
+    charCode: type === "keypress" && key.length === 1 ? key.charCodeAt(0) : 0,
+    shiftKey,
     bubbles: true,
-    cancelable: true
+    cancelable: true,
+    composed: true,
   });
-  target.dispatchEvent(event);
+  return target.dispatchEvent(event);
 }
 
-function insertCharacter(target, key) {
-  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+function insertCharacter(target, text) {
+  if (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement
+  ) {
     const start = target.selectionStart ?? target.value.length;
     const end = target.selectionEnd ?? target.value.length;
-
-    target.value = `${target.value.slice(0, start)}${key}${target.value.slice(end)}`;
-    const nextPosition = start + key.length;
-    target.setSelectionRange(nextPosition, nextPosition);
-    target.dispatchEvent(new InputEvent('input', { bubbles: true, data: key, inputType: 'insertText' }));
-    return;
+    target.setRangeText(text, start, end, "end");
+    target.dispatchEvent(
+      new InputEvent("input", {
+        bubbles: true,
+        data: text,
+        inputType: "insertText",
+      }),
+    );
+  } else if (target instanceof HTMLElement && target.isContentEditable) {
+    document.execCommand("insertText", false, text);
   }
+}
 
-  if (target instanceof HTMLElement && target.isContentEditable) {
-    target.focus();
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0) {
-      target.append(key);
-    } else {
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(document.createTextNode(key));
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
-
-    target.dispatchEvent(new InputEvent('input', { bubbles: true, data: key, inputType: 'insertText' }));
-  }
+function isFocusedFrame() {
+  if (!document.hasFocus()) return false;
+  const a = document.activeElement;
+  // If focus is inside a child iframe, that frame's copy of this script handles it
+  return !(a && (a.tagName === "IFRAME" || a.tagName === "FRAME"));
 }
 
 async function typeText(text) {
+  if (!isFocusedFrame()) return;
+
   const target = document.activeElement || document.body;
 
-  if (target instanceof HTMLElement) {
-    target.focus();
-  }
+  for (const ch of text.replace(/\r\n?/g, "\n")) {
+    const info = describeChar(ch);
 
-  for (const key of text) {
-    fireKeyboardEvent(target, 'keydown', key);
-    fireKeyboardEvent(target, 'keypress', key);
-    insertCharacter(target, key);
-    fireKeyboardEvent(target, 'keyup', key);
+    if (info.shift) fireKey(target, "keydown", SHIFT, true);
+
+    const notHandled = fireKey(target, "keydown", info, info.shift);
+    fireKey(target, "keypress", info, info.shift);
+
+    // Only insert locally if nothing (e.g. a VNC client) claimed the key
+    if (notHandled && !SPECIAL[ch]) insertCharacter(target, ch);
+
+    fireKey(target, "keyup", info, info.shift);
+    if (info.shift) fireKey(target, "keyup", SHIFT, false);
+
     await wait(keyDelayMs);
   }
 }
 
 api.runtime.onMessage.addListener((message) => {
-  if (!message || message.type !== 'TYPE_TEXT' || typeof message.text !== 'string') {
-    return;
+  if (
+    message &&
+    message.type === "TYPE_TEXT" &&
+    typeof message.text === "string"
+  ) {
+    typeText(message.text);
   }
-
-  typeText(message.text);
 });

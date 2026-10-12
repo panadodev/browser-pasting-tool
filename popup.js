@@ -1,48 +1,40 @@
-const api = typeof browser !== 'undefined' ? browser : chrome;
+const api = typeof browser !== "undefined" ? browser : chrome;
+const DELAY_SECONDS = 3;
 
-const input = document.getElementById('pasteText');
-const button = document.getElementById('pasteButton');
-const status = document.getElementById('status');
+const textEl = document.getElementById("text");
+const statusEl = document.getElementById("status");
 
-function setStatus(message) {
-  status.textContent = message;
+async function readClipboard() {
+  try {
+    const clip = await navigator.clipboard.readText();
+    if (clip) {
+      textEl.value = clip;
+      statusEl.textContent = `Loaded ${clip.length} characters from clipboard.`;
+      return;
+    }
+    statusEl.textContent = "Clipboard is empty.";
+  } catch {
+    statusEl.textContent =
+      "Could not read clipboard. Paste into the box with Ctrl+V.";
+  }
+  textEl.focus();
 }
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+document.getElementById("read").addEventListener("click", readClipboard);
 
-async function startPasteFlow() {
-  const text = input.value;
-
+document.getElementById("go").addEventListener("click", () => {
+  const text = textEl.value;
   if (!text) {
-    setStatus('Please enter text first.');
+    statusEl.textContent = "Nothing to type.";
     return;
   }
 
-  button.disabled = true;
-
-  for (let remaining = 3; remaining > 0; remaining -= 1) {
-    setStatus(`Pasting in ${remaining}...`);
-    await wait(1000);
-  }
-
-  try {
-    const [tab] = await api.tabs.query({ active: true, currentWindow: true });
-
-    if (!tab || typeof tab.id !== 'number') {
-      throw new Error('No active tab found.');
-    }
-
-    await api.tabs.sendMessage(tab.id, { type: 'TYPE_TEXT', text });
-    setStatus('Typing started.');
-  } catch (error) {
-    setStatus('Could not send text to this page.');
-  } finally {
-    button.disabled = false;
-  }
-}
-
-button.addEventListener('click', () => {
-  startPasteFlow();
+  api.runtime.sendMessage({
+    type: "START_TYPING",
+    text,
+    delaySec: DELAY_SECONDS,
+  });
+  window.close();
 });
+
+readClipboard();

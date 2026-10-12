@@ -1,24 +1,42 @@
 {
   "manifest_version": 3,
   "name": "Browser Pasting Tool",
-  "version": "0.1.0",
-  "description": "Type pasted text into the focused location after a 3-second countdown.",
-  "permissions": ["activeTab"],
-  "host_permissions": ["<all_urls>"],
+  "version": "0.4.0",
+  "description": "Type clipboard text into the focused location after a 3-second countdown.",
+  "permissions": [
+    "activeTab",
+    "clipboardRead",
+    "debugger"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "action": {
     "default_title": "Browser Pasting Tool",
     "default_popup": "popup.html"
   },
+  "background": {
+    "service_worker": "background.js",
+    "scripts": [
+      "background.js"
+    ]
+  },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "match_about_blank": true
     }
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "browser-pasting-tool@panadodev"
+      "id": "browser-pasting-tool@panadodev",
+      "strict_min_version": "125.0"
     }
   }
 }

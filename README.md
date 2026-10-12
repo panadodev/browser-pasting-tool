@@ -5,10 +5,13 @@ Last resort to not being able to paste through remote VNC etc.
 
 This repository now contains a minimal browser extension starter:
 
-- popup with a text input
-- `Paste` button
-- 3-second countdown
-- sends keystrokes into the currently focused location on the active page
+- a context-menu command named **Paste with Browser Pasting Tool**
+- reads the current clipboard text
+- types it character by character into the currently focused location
+
+The extension uses a content script to emit keyboard events and update normal
+web inputs one character at a time. This does not require the unsupported
+Firefox `debugger` permission.
 
 ### Load in Chromium-based browsers
 
@@ -21,12 +24,10 @@ This repository now contains a minimal browser extension starter:
 
 1. Open `about:debugging#/runtime/this-firefox`
 2. Click **Load Temporary Add-on**
-3. Select `/home/runner/work/browser-pasting-tool/browser-pasting-tool/manifest.json`
+3. Select `manifest.firefox.json` from this repository
 
 ### Usage
 
-1. Focus the remote session/input where text should be typed.
-2. Open the extension popup.
-3. Paste text in the input field.
-4. Click **Paste**.
-5. Switch/focus back to the target within 3 seconds.
+1. Copy the text that should be typed.
+2. Focus the target input or remote session.
+3. Right-click and choose **Paste with Browser Pasting Tool**.

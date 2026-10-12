@@ -1,44 +1,46 @@
 <!doctype html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Browser Pasting Tool</title>
+    <meta charset="utf-8" />
     <style>
       body {
-        font-family: Arial, sans-serif;
-        width: 300px;
-        margin: 12px;
+        width: 320px;
+        margin: 0;
+        padding: 12px;
+        font:
+          13px system-ui,
+          sans-serif;
       }
-
-      label,
-      input,
-      button,
-      #status {
-        display: block;
+      textarea {
         width: 100%;
-      }
-
-      input,
-      button {
+        height: 120px;
         box-sizing: border-box;
-        margin-top: 6px;
-        padding: 8px;
+        font-family: monospace;
       }
-
+      .row {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      button {
+        flex: 1;
+        padding: 6px;
+        cursor: pointer;
+      }
       #status {
-        margin-top: 10px;
-        min-height: 20px;
-        font-size: 0.9rem;
+        margin-top: 8px;
+        color: #666;
+        min-height: 1em;
       }
     </style>
   </head>
   <body>
-    <label for="pasteText">Text to type</label>
-    <input id="pasteText" type="text" placeholder="Paste text here" />
-    <button id="pasteButton" type="button">Paste</button>
-    <div id="status" aria-live="polite"></div>
-
+    <textarea id="text" placeholder="Paste text here (Ctrl+V)"></textarea>
+    <div class="row">
+      <button id="read">Read clipboard</button>
+      <button id="go">Type in 3s</button>
+    </div>
+    <div id="status"></div>
     <script src="popup.js"></script>
   </body>
 </html>
